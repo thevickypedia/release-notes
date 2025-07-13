@@ -28,6 +28,12 @@ jobs:
   update-release-notes:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
       - uses: thevickypedia/update-release-notes@v1
         env:
           git_token: ${{ secrets.GIT_TOKEN }}
