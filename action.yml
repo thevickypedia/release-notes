@@ -1,5 +1,5 @@
 ---
-name: update-release-notes
+name: release-notes
 description: Lightweight composite action to generate and update release notes for a repository using Gitverse via GitHub action bot.
 
 inputs:
