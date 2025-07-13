@@ -6,7 +6,6 @@ inputs:
   git_token:
     description: 'GitHub token with write access to the repository'
     required: true
-    default: ${{ secrets.GIT_TOKEN }}
 
 branding:
   icon: terminal
@@ -62,4 +61,4 @@ runs:
         fi
       shell: bash
       env:
-        GIT_TOKEN: ${{ secrets.GIT_TOKEN }}
+        GIT_TOKEN: ${{ inputs.git_token }}
