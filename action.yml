@@ -1,0 +1,65 @@
+---
+name: update-release-notes
+description: Lightweight composite action to upload Python distribution packages to PyPI
+
+inputs:
+  git_token:
+    description: 'GitHub token with write access to the repository'
+    required: true
+    default: ${{ secrets.GIT_TOKEN }}
+
+branding:
+  icon: terminal
+  color: gray-dark
+
+runs:
+  using: composite
+  steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    - name: Install Gitverse
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install gitverse
+        gitverse_version=$(gitverse --version)
+        echo "::notice title=gitverse version::${gitverse_version}"
+      shell: bash
+    - name: Generate Release Notes
+      run: |
+        gitverse-release reverse -f release_notes.rst -t 'Release Notes'
+      shell: bash
+    - name: Get default branch
+      id: get_default_branch
+      run: |
+        echo "default_branch=$(git remote show origin | grep 'HEAD branch' | cut -d' ' -f5)" >> $GITHUB_ENV
+        echo "default_branch=$(git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@') >> $GITHUB_ENV"
+      shell: bash
+    - name: Ensure on ${{ env.default_branch }} branch
+      run: |
+        git fetch origin ${{ env.default_branch }}
+        git checkout ${{ env.default_branch }}
+        git pull origin ${{ env.default_branch }}
+      shell: bash
+    - name: Commit and Push Changes
+      # https://github.com/orgs/community/discussions/26560
+      run: |
+        git diff --no-prefix --unified=0
+        git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        git config user.name "github-actions[bot]"
+        git add release_notes.rst
+        if ! git diff --cached --quiet; then
+          echo "::notice title=Changes detected::Committing and pushing changes to release notes."
+          git commit --author="github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>" -m "Update release notes"
+          git push origin ${{ env.default_branch }}
+        else
+          echo "::warning title=No update::The release notes file has not changed, skipping commit and push."
+        fi
+      shell: bash
+      env:
+        GIT_TOKEN: ${{ secrets.GIT_TOKEN }}
