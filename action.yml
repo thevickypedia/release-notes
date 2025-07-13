@@ -4,8 +4,24 @@ description: Lightweight composite action to upload Python distribution packages
 
 inputs:
   git_token:
-    description: 'GitHub token with write access to the repository'
+    description: GitHub token with write access to the repository.
     required: true
+  source:
+    description: Source for release notes generation. Can be 'release' or 'commit'
+    default: release
+    required: false
+  filename:
+    description: Name of the release notes file to be generated.
+    default: 'release_notes.rst'
+    required: false
+  title:
+    description: Title for the release notes section.
+    default: 'Release Notes'
+    required: false
+  reverse:
+    description: Whether to reverse the order of commits in the release notes.
+    default: 'true'
+    required: false
 
 branding:
   icon: terminal
@@ -28,7 +44,17 @@ runs:
       shell: bash
     - name: Generate Release Notes
       run: |
-        gitverse-release reverse -f release_notes.rst -t 'Release Notes'
+        if [ "${{ inputs.reverse }}" = "true" ]; then
+          sort="reverse"
+        fi
+        if [ "${{ inputs.source }}" = "release" ]; then
+          gitverse-release ${sort} -f ${{ inputs.filename }} -t '${{ inputs.title }}'
+        elif [ "${{ inputs.source }}" = "commit" ]; then
+          gitverse-commit ${sort} -f ${{ inputs.filename }} -t '${{ inputs.title }}'
+        else
+          echo "::error::Invalid source specified. Use 'release' or 'commit'."
+          exit 1
+        fi
       shell: bash
     - name: Get default branch
       id: get_default_branch
