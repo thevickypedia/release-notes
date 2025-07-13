@@ -44,7 +44,7 @@ runs:
           echo "::error::Git is not installed on the runner."
           exit 1
         fi
-        ech "::notice title=Git version::$(git --version)"
+        echo "::notice title=Git version::$(git --version)"
       shell: bash
     - name: Check python
       run: |
