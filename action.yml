@@ -1,6 +1,6 @@
 ---
 name: update-release-notes
-description: Lightweight composite action to upload Python distribution packages to PyPI
+description: Lightweight composite action to generate and update release notes for a repository using Gitverse via GitHub action bot.
 
 inputs:
   git_token:
@@ -9,6 +9,14 @@ inputs:
   source:
     description: Source for release notes generation. Can be 'release' or 'commit'
     default: release
+    required: false
+  commit-branch:
+    description: Branch to use for commit-based release notes. Defaults to the default branch of the repository.
+    default: ""
+    required: false
+  branch:
+    description: Branch to push the release notes to. Defaults to the default branch of the repository.
+    default: ""
     required: false
   filename:
     description: Name of the release notes file to be generated.
@@ -30,10 +38,40 @@ branding:
 runs:
   using: composite
   steps:
+    - name: Check git
+      run: |
+        if ! command -v git &> /dev/null; then
+          echo "::error::Git is not installed on the runner."
+          exit 1
+        fi
+        ech "::notice title=Git version::$(git --version)"
+      shell: bash
+    - name: Check python
+      run: |
+        if ! command -v python &> /dev/null; then
+          echo "::error::Python is not installed on the runner."
+          exit 1
+        fi
+        echo "::notice title=Python version::$(python --version)"
+      shell: bash
     - name: Setup bot
       run: |
         git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
         git config user.name "github-actions[bot]"
+      shell: bash
+    - name: Get default branch
+      run: |
+        echo "default_branch=$(git remote show origin | grep 'HEAD branch' | cut -d' ' -f5)" >> $GITHUB_ENV
+      shell: bash
+    - name: Set target branch
+      run: |
+        if [ -z "${{ inputs.branch }}" ]; then
+          echo "::notice title=Branch not specified::Using the default branch of the repository."
+          echo "branch=${{ env.default_branch }}" >> $GITHUB_ENV
+        else
+          echo "::notice title=Branch specified::Using the specified branch: ${{ inputs.branch }}"
+          echo "branch=${{ inputs.branch }}" >> $GITHUB_ENV
+        fi
       shell: bash
     - name: Install Gitverse
       run: |
@@ -50,35 +88,37 @@ runs:
         if [ "${{ inputs.source }}" = "release" ]; then
           gitverse-release ${sort} -f ${{ inputs.filename }} -t '${{ inputs.title }}'
         elif [ "${{ inputs.source }}" = "commit" ]; then
-          gitverse-commit ${sort} -f ${{ inputs.filename }} -t '${{ inputs.title }}'
+          if [ -z "${{ inputs.commit-branch }}" ]; then
+            echo "::notice title=Commit branch not specified::Using the default branch ['${{ env.default_branch }}'] of the repository."
+            commit_branch="${{ env.default_branch }}"
+          else
+            echo "::notice title=Commit branch specified::Using the specified branch: ${{ inputs.commit-branch }}"
+            commit_branch="${{ inputs.commit-branch }}"
+          fi
+          gitverse-commit ${sort} -b ${commit_branch} -f ${{ inputs.filename }} -t '${{ inputs.title }}'
         else
           echo "::error::Invalid source specified. Use 'release' or 'commit'."
           exit 1
         fi
       shell: bash
-    - name: Get default branch
-      id: get_default_branch
+    - name: Ensure on ${{ env.branch }} branch
       run: |
-        echo "default_branch=$(git remote show origin | grep 'HEAD branch' | cut -d' ' -f5)" >> $GITHUB_ENV
-        echo "default_branch=$(git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@') >> $GITHUB_ENV"
-      shell: bash
-    - name: Ensure on ${{ env.default_branch }} branch
-      run: |
-        git fetch origin ${{ env.default_branch }}
-        git checkout ${{ env.default_branch }}
-        git pull origin ${{ env.default_branch }}
+        echo "::notice title=Branch check::Checking out the branch ${{ env.branch }}."
+        git fetch origin ${{ env.branch }}
+        git checkout ${{ env.branch }}
+        git pull origin ${{ env.branch }}
       shell: bash
     - name: Commit and Push Changes
       # https://github.com/orgs/community/discussions/26560
       run: |
         git diff --no-prefix --unified=0
-        git add release_notes.rst
+        git add ${{ inputs.filename }}
         if ! git diff --cached --quiet; then
-          echo "::notice title=Changes detected::Committing and pushing changes to release notes."
+          echo "::notice title=Changes detected::Committing and pushing changes to ${{ inputs.filename }} on branch ${{ env.branch }}."
           git commit --author="github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>" -m "Update release notes"
-          git push origin ${{ env.default_branch }}
+          git push origin ${{ env.branch }}
         else
-          echo "::warning title=No update::The release notes file has not changed, skipping commit and push."
+          echo "::warning title=No update::${{ inputs.filename }} has not changed, skipping commit and push."
         fi
       shell: bash
       env:
