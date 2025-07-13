@@ -1,0 +1,14 @@
+name: Update Release Notes
+
+on:
+  workflow_dispatch:
+  release:
+    types: [ published ]
+
+jobs:
+  release-notes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: thevickypedia/release-notes@v1
+        env:
+          git_token: ${{ secrets.GIT_TOKEN }}
