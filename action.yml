@@ -83,7 +83,8 @@ runs:
       run: |
         python -m pip install --upgrade pip
         python -m pip install --user gitverse
-        echo "$(python -m site --user-base)/bin" >> $GITHUB_PATH
+        echo "PATH=$(python -m site --user-base)/bin:$PATH" >> $GITHUB_ENV
+        export PATH="$(python -m site --user-base)/bin:$PATH"
         gitverse_version=$(gitverse --version)
         echo "::notice title=gitverse version::${gitverse_version}"
       shell: bash
