@@ -10,7 +10,11 @@ inputs:
     description: Source for release notes generation. Can be 'release' or 'commit'
     default: release
     required: false
-  commit-branch:
+  commit_message:
+    description: Commit message for the release notes update.
+    default: "Update release notes"
+    required: false
+  commit_branch:
     description: Branch to use for commit-based release notes. Defaults to the default branch of the repository.
     default: ""
     required: false
@@ -54,16 +58,13 @@ runs:
         fi
         echo "::notice title=Python version::$(python --version)"
       shell: bash
-    - name: Setup bot
-      run: |
-        git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-        git config user.name "github-actions[bot]"
-      shell: bash
-    - name: Get default branch
+    - name: Set variables
       run: |
         echo "default_branch=$(git remote show origin | grep 'HEAD branch' | cut -d' ' -f5)" >> $GITHUB_ENV
+        echo "BOT_NAME=github-actions[bot]" >> $GITHUB_ENV
+        echo "BOT_EMAIL=41898282+github-actions[bot]@users.noreply.github.com" >> $GITHUB_ENV
       shell: bash
-    - name: Set target branch
+    - name: Set variables
       run: |
         if [ -z "${{ inputs.branch }}" ]; then
           echo "::notice title=Branch not specified::Using the default branch of the repository."
@@ -73,10 +74,16 @@ runs:
           echo "branch=${{ inputs.branch }}" >> $GITHUB_ENV
         fi
       shell: bash
+    - name: Setup bot
+      run: |
+        git config user.name "${{ env.BOT_NAME }}"
+        git config user.email "${{ env.BOT_EMAIL }}"
+      shell: bash
     - name: Install Gitverse
       run: |
         python -m pip install --upgrade pip
-        python -m pip install gitverse
+        python -m pip install --user gitverse
+        echo "$(python -m site --user-base)/bin" >> $GITHUB_PATH
         gitverse_version=$(gitverse --version)
         echo "::notice title=gitverse version::${gitverse_version}"
       shell: bash
@@ -88,12 +95,12 @@ runs:
         if [ "${{ inputs.source }}" = "release" ]; then
           gitverse-release ${sort} -f ${{ inputs.filename }} -t '${{ inputs.title }}'
         elif [ "${{ inputs.source }}" = "commit" ]; then
-          if [ -z "${{ inputs.commit-branch }}" ]; then
+          if [ -z "${{ inputs.commit_branch }}" ]; then
             echo "::notice title=Commit branch not specified::Using the default branch ['${{ env.default_branch }}'] of the repository."
             commit_branch="${{ env.default_branch }}"
           else
-            echo "::notice title=Commit branch specified::Using the specified branch: ${{ inputs.commit-branch }}"
-            commit_branch="${{ inputs.commit-branch }}"
+            echo "::notice title=Commit branch specified::Using the specified branch: ${{ inputs.commit_branch }}"
+            commit_branch="${{ inputs.commit_branch }}"
           fi
           gitverse-commit ${sort} -b ${commit_branch} -f ${{ inputs.filename }} -t '${{ inputs.title }}'
         else
@@ -115,7 +122,7 @@ runs:
         git add ${{ inputs.filename }}
         if ! git diff --cached --quiet; then
           echo "::notice title=Changes detected::Committing and pushing changes to ${{ inputs.filename }} on branch ${{ env.branch }}."
-          git commit --author="github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>" -m "Update release notes"
+          git commit --author="${{ env.BOT_NAME }} <${{ env.BOT_EMAIL }}>" -m "${{ inputs.commit_message }}"
           git push origin ${{ env.branch }}
         else
           echo "::warning title=No update::${{ inputs.filename }} has not changed, skipping commit and push."

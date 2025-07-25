@@ -41,14 +41,16 @@ jobs:
 
 ### Allowed Inputs
 
-| Parameter       | Description                                    | Default             |
-|-----------------|------------------------------------------------|---------------------|
-| `source`        | Source for release notes. (`commit`/`release`) | `release`           |
-| `commit-branch` | Branch to use for commit-based release notes.  | `$default`          |
-| `branch`        | Branch to push release notes to.               | `$default`          |
-| `filename`      | Filename for the release notes.                | `release_notes.rst` |
-| `title`         | Title for the release notes.                   | `Release Notes`     |
-| `reverse`       | Boolean flag to sort in reverse order.         | `true`              |
+| Parameter        | Description                                    | Default             |
+|------------------|------------------------------------------------|---------------------|
+| `git_token`      | GitHub token for authentication.               | N/A                 |
+| `source`         | Source for release notes. (`commit`/`release`) | `release`           |
+| `commit_message` | Commit message for the release notes upate.    | `$default`          |
+| `commit_branch`  | Branch to use for commit-based release notes.  | `$default`          |
+| `branch`         | Branch to push release notes to.               | `$default`          |
+| `filename`       | Filename for the release notes.                | `release_notes.rst` |
+| `title`          | Title for the release notes.                   | `Release Notes`     |
+| `reverse`        | Boolean flag to sort in reverse order.         | `true`              |
 
 ## License & copyright
 
