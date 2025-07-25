@@ -1,6 +1,11 @@
 Release Notes
 =============
 
+v2 (07/25/2025)
+---------------
+- 767e6bf Add bin location to PATH
+- 5881356 Allow users to pass commit message through workflow calls
+
 v1 (07/13/2025)
 ---------------
 - 6e92d0b Update documentation to include checkout and setup-python actions
